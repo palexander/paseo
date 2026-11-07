@@ -20,6 +20,7 @@ import {
   MenuTrigger,
   MenuItem,
   MenuSeparator,
+  MenuSurface,
   MenuSubTrigger,
   useMenuContext,
   type MenuPageDefinition,
@@ -244,6 +245,7 @@ function buttonPages(
 function ButtonControl({ view }: { view: ButtonView }) {
   const { entry, props } = view;
   const { button } = entry;
+  const Surface = button.behavior.kind === "menu" ? MenuSurface : PluginPopoverSurface;
   const composer = entry.placement === "composer";
   const disabled = button.disabled || entry.pending;
   const expanded = button.behavior.kind !== "action";
@@ -331,7 +333,7 @@ function ButtonControl({ view }: { view: ButtonView }) {
         </TooltipContent>
       </Tooltip>
       {expanded ? (
-        <PluginPopoverSurface
+        <Surface
           sheetTitle={button.title}
           side={composer ? "top" : "bottom"}
           align={composer ? "start" : "end"}
@@ -339,7 +341,7 @@ function ButtonControl({ view }: { view: ButtonView }) {
           pages={pages}
         >
           <ButtonSurfaceBody view={view} behavior={button.behavior} path={ROOT_PATH} />
-        </PluginPopoverSurface>
+        </Surface>
       ) : null}
     </MenuRoot>
   );
