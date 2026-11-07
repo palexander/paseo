@@ -59,6 +59,38 @@ export interface ToastApi {
 export type IconProps = Partial<PluginIconProps> &
   ({ name: string; icon?: never } | { icon: PluginIcon; name?: never });
 
+export interface ButtonProps {
+  children?: ReactNode;
+  onPress(): void;
+  variant?: "default" | "secondary" | "outline" | "ghost" | "destructive";
+  size?: "sm" | "md";
+  leftIcon?: ReactElement;
+  disabled?: boolean;
+  loading?: boolean;
+  accessibilityLabel?: string;
+  style?: StyleProp<ViewStyle>;
+}
+/** Paseo's themed action control, including hover, disabled and loading feedback. */
+export declare const Button: ComponentType<ButtonProps>;
+
+export interface ActionMenuProps {
+  title: string;
+  leading?: ReactElement;
+  items: readonly {
+    id: string;
+    title: string;
+    leading?: ReactElement;
+    separatorBefore?: boolean;
+    disabled?: boolean;
+  }[];
+  onSelect(id: string): void | Promise<void>;
+  onError?(error: unknown): void;
+  disabled?: boolean;
+  loading?: boolean;
+}
+/** A standard dropdown action control, without a separate field label or submit button. */
+export declare const ActionMenu: ComponentType<ActionMenuProps>;
+
 export declare const Icon: ComponentType<IconProps>;
 export declare const Modal: ModalComponent;
 export declare function useToast(): ToastApi;

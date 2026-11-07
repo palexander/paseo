@@ -1984,6 +1984,23 @@ Items can use all three behaviors. Nested menus open flyouts on wide layouts and
 navigation within the same compact sheet. Custom content pages open on selection, never hover.
 Choosing an action closes the menu; opening another page keeps it open.
 
+### Buttons in custom content
+
+This source build exports `Button` from `@getpaseo/plugin/client/ui`. Use it for
+popover and modal actions so controls inherit Paseo's geometry, hover feedback,
+theme and loading state. It accepts `variant` (`secondary`, `outline`, `ghost`,
+`default`, `destructive`), `size` (`sm`, `md`), `leftIcon`, `disabled`, `loading`,
+`accessibilityLabel`, `style` and `onPress`. The client must include this API;
+released clients without it need an update.
+
+`ActionMenu` uses the same dropdown trigger and menu rows as Paseo controls.
+Supply `title`, optional `leading`, `items` (`id`, `title`, optional `leading`,
+`separatorBefore`, `disabled`) and `onSelect(id)`. It awaits actions, blocks
+repeated selection and reports errors through the standard toast unless
+`onError(error)` is provided. `disabled` and `loading` control the trigger.
+This source-build API supports action selection directly, without a separate
+field label or submit button.
+
 ### Custom icons and popover content
 
 `PluginButtonIconProps` contains `theme`, `host`, `layout`, `size`, `color`, and the target context.
