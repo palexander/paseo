@@ -2719,6 +2719,10 @@ export class HostRuntimeStore {
     return earliestServerId;
   }
 
+  ensureConnected(serverId: string): void {
+    this.controllers.get(serverId)?.ensureConnected({ verify: true });
+  }
+
   ensureConnectedAll(options?: { verify?: boolean }): void {
     for (const controller of this.controllers.values()) {
       controller.ensureConnected(options);

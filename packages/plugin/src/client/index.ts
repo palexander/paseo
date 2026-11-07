@@ -97,3 +97,8 @@ export type { PluginI18n } from "./translations.js";
 export type { PluginText, PluginMessage, PluginTranslations } from "../text.js";
 
 export { useTabState } from "./tab.js";
+
+export type {
+  PluginHostPreflightRequest,
+  PluginHostPreflightContribution,
+} from "./host-preflight.js";

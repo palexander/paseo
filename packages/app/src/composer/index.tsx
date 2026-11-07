@@ -1,3 +1,5 @@
+import { prepareConversationHost, useConversationHostPreflight } from "@/runtime/conversation-host";
+import { HostPreflightStatus } from "./host-preflight-status";
 import {
   useComposerEditingSession,
   useComposerFullscreen,
@@ -923,6 +925,7 @@ interface ComposerProps {
   workspaceId?: string | null;
   isPaneFocused: boolean;
   onSubmitMessage?: (payload: MessagePayload) => Promise<void>;
+  onPrepareSubmit?: () => Promise<void>;
   onClientSlashCommand?: (command: ClientSlashCommand) => Promise<void>;
   /** When true, the submit button is enabled even without text or images (e.g. external attachment selected). */
   hasExternalContent?: boolean;
@@ -1241,6 +1244,7 @@ function ComposerContentImpl({
   serverId,
   workspaceId,
   onSubmitMessage,
+  onPrepareSubmit,
   onClientSlashCommand,
   hasExternalContent = false,
   allowEmptySubmit = false,
@@ -1284,6 +1288,7 @@ function ComposerContentImpl({
   const buttonIconSize = resolveComposerButtonIconSize();
   const client = useHostRuntimeClient(serverId);
   const isConnected = useHostRuntimeIsConnected(serverId);
+  const hostPreflight = useConversationHostPreflight(serverId);
   const agentDirectoryStatus = useHostRuntimeAgentDirectoryStatus(serverId);
   const toast = useToast();
   const toastErrorRef = useRef(toast.error);
@@ -1403,7 +1408,10 @@ function ComposerContentImpl({
     workspaceId,
     agentId,
   });
-  const isComposerLocked = resolveIsComposerLocked(submitBehavior, isSubmitLoading);
+  const isPreparingHost = hostPreflight !== null && hostPreflight.phase !== "failed";
+  const isWaitingSubmission = isPreparingHost && isProcessing;
+  const isComposerLocked =
+    resolveIsComposerLocked(submitBehavior, isSubmitLoading || isProcessing) || isWaitingSubmission;
   const keyboardHandlerIdRef = useRef(
     `message-input:${serverId}:${agentId}:${Math.random().toString(36).slice(2)}`,
   );
@@ -1478,6 +1486,8 @@ function ComposerContentImpl({
   const { pickImages } = useImageAttachmentPicker();
   const { pickFiles } = useFilePicker();
   const agentIdRef = useRef(agentId);
+  const hasAgentForPreflightRef = useRef(agentState.status !== null);
+  hasAgentForPreflightRef.current = agentState.status !== null;
   const sendAgentMessageRef = useRef<
     | ((
         agentId: string,
@@ -1488,6 +1498,8 @@ function ComposerContentImpl({
     | null
   >(null);
   const onSubmitMessageRef = useRef(onSubmitMessage);
+  const onPrepareSubmitRef = useRef(onPrepareSubmit);
+  onPrepareSubmitRef.current = onPrepareSubmit;
 
   const addImages = useCallback(
     (images: ImageAttachment[]) => {
@@ -1538,6 +1550,13 @@ function ComposerContentImpl({
 
   const submitMessage = useCallback(
     async (text: string, submitAttachments: ComposerAttachment[]) => {
+      await prepareConversationHost({
+        serverId,
+        workspaceId: workspaceId ?? undefined,
+        ...(agentIdRef.current ? { agentId: agentIdRef.current } : {}),
+        reason: hasAgentForPreflightRef.current ? "agent.send" : "agent.create",
+      });
+      await onPrepareSubmitRef.current?.();
       onMessageSent?.();
       if (onSubmitMessageRef.current) {
         await onSubmitMessageRef.current({ text, attachments: submitAttachments, cwd });
@@ -1553,7 +1572,7 @@ function ComposerContentImpl({
         appSettings.sendBehavior === "steer" ? "steer" : "interrupt",
       );
     },
-    [appSettings.sendBehavior, cwd, onMessageSent, t],
+    [appSettings.sendBehavior, cwd, onMessageSent, serverId, workspaceId, t],
   );
 
   useEffect(() => {
@@ -1567,11 +1586,12 @@ function ComposerContentImpl({
       sendAttachments: ComposerAttachment[],
       activeTurnBehavior: "interrupt" | "steer",
     ) => {
-      if (!client) {
+      const currentClient = getHostRuntimeStore().getClient(serverId);
+      if (!currentClient) {
         throw new Error(t("workspace.terminal.hostDisconnected"));
       }
       await dispatchComposerAgentMessage({
-        client,
+        client: currentClient,
         agentId: targetAgentId,
         text,
         attachments: sendAttachments,
@@ -2435,6 +2455,7 @@ function ComposerContentImpl({
         }
       >
         <AttachmentLightbox source={lightboxSource} onClose={handleLightboxClose} />
+        <HostPreflightStatus serverId={serverId} />
         {/* Input area */}
         <View style={inputAreaContainerStyle}>
           <View style={inputAreaContentStyle}>
@@ -2486,7 +2507,7 @@ function ComposerContentImpl({
                   placeholder={messagePlaceholder}
                   autoFocus={messageInputAutoFocus}
                   autoFocusKey={`${serverId}:${agentId}:${autoFocusKey ?? ""}`}
-                  disabled={isSubmitLoading}
+                  disabled={isComposerLocked}
                   leftContent={leftContent}
                   beforeVoiceContent={beforeVoiceContent}
                   rightContent={rightContent}
