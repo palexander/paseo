@@ -20,6 +20,7 @@ import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Theme } from "@/styles/theme";
 import { MenuDepthProvider, useMenuContext } from "./menu-context";
+import { MenuTrigger } from "./menu-root";
 import { MENU_ITEM_HEIGHT } from "./menu-geometry";
 
 const ThemedCheck = withUnistyles(Check);
@@ -221,7 +222,20 @@ function resolveItemLabel(input: {
   return children;
 }
 
+function resolveTrailingContent({
+  trailing,
+  showSelectedCheck,
+  selected,
+}: Pick<MenuItemProps, "trailing" | "showSelectedCheck" | "selected">): ReactElement | null {
+  return (
+    trailing ??
+    (!showSelectedCheck && selected ? <ThemedCheck size={16} uniProps={mutedMapping} /> : null)
+  );
+}
+
 export interface MenuItemProps {
+  /** Use the same row geometry to open this MenuRoot instead of selecting an action. */
+  asTrigger?: boolean;
   description?: string;
   onSelect?: () => void;
   disabled?: boolean;
@@ -254,6 +268,7 @@ export interface MenuItemProps {
 }
 
 export function MenuItem({
+  asTrigger = false,
   children,
   description,
   onSelect,
@@ -286,9 +301,7 @@ export function MenuItem({
 
   const label = resolveItemLabel({ children, isPending, isSuccess, pendingLabel, successLabel });
 
-  const trailingContent =
-    trailing ??
-    (!showSelectedCheck && selected ? <ThemedCheck size={16} uniProps={mutedMapping} /> : null);
+  const trailingContent = resolveTrailingContent({ trailing, showSelectedCheck, selected });
 
   const handleItemPress = useCallback(() => {
     if (isDisabled) return;
@@ -308,9 +321,10 @@ export function MenuItem({
       pressed,
       hovered = false,
       focused = false,
-    }: PressableStateCallbackType & { hovered?: boolean; focused?: boolean }) => [
+      open = false,
+    }: PressableStateCallbackType & { hovered?: boolean; focused?: boolean; open?: boolean }) => [
       styles.item,
-      active ? styles.itemActive : null,
+      active || open ? styles.itemActive : null,
       isDisabled ? styles.itemDisabled : null,
       muted && !isDisabled ? styles.itemMuted : null,
       hovered && !pressed && !isDisabled ? styles.itemHovered : null,
@@ -334,8 +348,9 @@ export function MenuItem({
     [isDisabled],
   );
 
+  const Row = asTrigger ? MenuTrigger : Pressable;
   const content = (
-    <Pressable
+    <Row
       testID={testID}
       accessibilityRole="menuitem"
       accessibilityState={accessibilityState}
@@ -363,7 +378,7 @@ export function MenuItem({
         ) : null}
       </View>
       {trailingContent ? <View style={styles.trailingSlot}>{trailingContent}</View> : null}
-    </Pressable>
+    </Row>
   );
 
   if (!tooltip) {

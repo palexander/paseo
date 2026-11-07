@@ -73,6 +73,18 @@ export interface ButtonProps {
 /** Paseo's themed action control, including hover, disabled and loading feedback. */
 export declare const Button: ComponentType<ButtonProps>;
 
+export interface MenuActionProps {
+  children: string;
+  onSelect(): void;
+  leading?: ReactElement;
+  disabled?: boolean;
+  loading?: boolean;
+  destructive?: boolean;
+  closeOnSelect?: boolean;
+}
+/** A standard menu row inside popover content. Use closeOnSelect=false to keep it open. */
+export declare const MenuAction: ComponentType<MenuActionProps>;
+
 export interface ActionMenuProps {
   title: string;
   leading?: ReactElement;

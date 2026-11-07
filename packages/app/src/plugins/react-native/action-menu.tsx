@@ -9,12 +9,14 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
-import { DropdownTrigger } from "@/components/ui/dropdown-trigger";
+import { ChevronDown } from "lucide-react-native";
 import { LoadingSpinner } from "@/components/ui/loading-spinner";
 import { useToast } from "@/contexts/toast-context";
 
 const ThemedSpinner = withUnistyles(LoadingSpinner);
+const ThemedChevronDown = withUnistyles(ChevronDown);
 const spinnerMapping = (theme: Theme) => ({ color: theme.colors.foregroundMuted });
+const triggerChevron = <ThemedChevronDown size={14} uniProps={spinnerMapping} />;
 
 export function ActionMenu({
   title,
@@ -49,13 +51,14 @@ export function ActionMenu({
   );
   return (
     <DropdownMenu compactMode="sheet">
-      <DropdownTrigger
-        accessibilityLabel={title}
+      <DropdownMenuItem
+        asTrigger
         disabled={disabled || pending || loading}
         leading={triggerLeading}
+        trailing={triggerChevron}
       >
         {title}
-      </DropdownTrigger>
+      </DropdownMenuItem>
       <DropdownMenuContent align="end" width={240} sheetTitle={title}>
         {items.map((item, index) => (
           <Fragment key={item.id}>

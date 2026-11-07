@@ -1,5 +1,6 @@
 export { ActionMenu } from "./action-menu";
 export { Button } from "@/components/ui/button";
+export { MenuItem as MenuAction } from "@/components/ui/menu";
 export {
   SettingsSection,
   SettingsCard,

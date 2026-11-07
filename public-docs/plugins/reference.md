@@ -1993,7 +1993,12 @@ theme and loading state. It accepts `variant` (`secondary`, `outline`, `ghost`,
 `accessibilityLabel`, `style` and `onPress`. The client must include this API;
 released clients without it need an update.
 
-`ActionMenu` uses the same dropdown trigger and menu rows as Paseo controls.
+`MenuAction` renders the same flat action row used by Paseo menus inside custom
+popover content. Supply text children, `onSelect`, optional `leading`, `disabled`,
+`loading`, `destructive` and `closeOnSelect`. Set `closeOnSelect={false}` when
+the action updates the current panel or opens its confirmation dialog.
+
+`ActionMenu` uses a flat menu-row trigger and the shared Paseo menu rows.
 Supply `title`, optional `leading`, `items` (`id`, `title`, optional `leading`,
 `separatorBefore`, `disabled`) and `onSelect(id)`. It awaits actions, blocks
 repeated selection and reports errors through the standard toast unless
