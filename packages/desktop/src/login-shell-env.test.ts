@@ -489,6 +489,69 @@ describeIfZsh("login shell env", () => {
     });
   });
 
+  it("keeps shell tools and credentials but removes macOS dynamic-linker overrides", async () => {
+    const home = await createShellHome();
+    homes.add(home);
+    await writeFile(
+      path.join(home, ".zshrc"),
+      [
+        'export PATH="$HOME/tools:$PATH"',
+        'export AWS_PROFILE="cloud-pilot"',
+        'export DYLD_LIBRARY_PATH="/usr/local/lib:/opt/homebrew/lib:"',
+        'export DYLD_FRAMEWORK_PATH="$HOME/frameworks"',
+        'export DYLD_FALLBACK_LIBRARY_PATH="$HOME/lib"',
+      ].join("\n") + "\n",
+    );
+    const env = {
+      ...createEnv(home),
+      DYLD_INSERT_LIBRARIES: "/tmp/inherited.dylib",
+    };
+    const logger = new RecordingLoginShellLogger();
+
+    inheritLoginShellEnv({ env, logger, platform: "darwin" });
+
+    expect(env.PATH?.split(path.delimiter)[0]).toBe(path.join(home, "tools"));
+    expect(env.AWS_PROFILE).toBe("cloud-pilot");
+    expect(Object.keys(env).filter((key) => key.startsWith("DYLD_"))).toEqual([]);
+    expect(logger.infos.at(-1)?.fields.ignoredEnvironmentVariables).toEqual([
+      "DYLD_FALLBACK_LIBRARY_PATH",
+      "DYLD_FRAMEWORK_PATH",
+      "DYLD_INSERT_LIBRARIES",
+      "DYLD_LIBRARY_PATH",
+    ]);
+  });
+
+  it("preserves dynamic-linker variables on Linux", async () => {
+    const home = await createShellHome();
+    homes.add(home);
+    await writeFile(path.join(home, ".zshrc"), 'export DYLD_LIBRARY_PATH="/test/lib"\n');
+    const env = createEnv(home);
+
+    inheritLoginShellEnv({
+      env,
+      logger: new RecordingLoginShellLogger(),
+      platform: "linux",
+    });
+
+    expect(env.DYLD_LIBRARY_PATH).toBe("/test/lib");
+  });
+
+  it("removes inherited macOS linker overrides even when shell startup fails", async () => {
+    const home = await createShellHome();
+    homes.add(home);
+    await writeFile(path.join(home, ".zshenv"), "exit 42\n");
+    const env = { ...createEnv(home), DYLD_LIBRARY_PATH: "/opt/homebrew/lib" };
+
+    inheritLoginShellEnv({
+      env,
+      logger: new RecordingLoginShellLogger(),
+      platform: "darwin",
+    });
+
+    expect(env.PATH).toBe(basePath);
+    expect(Object.keys(env).filter((key) => key.startsWith("DYLD_"))).toEqual([]);
+  });
+
   it("loads the user's zshrc while resolving the login shell env", async () => {
     const home = await createShellHome();
     homes.add(home);

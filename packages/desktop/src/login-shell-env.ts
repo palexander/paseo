@@ -488,11 +488,20 @@ function resolveShellEnv({ deps, timeoutMs }: ResolveShellEnvInput): ResolvedShe
   throw lastError;
 }
 
+/** Native macOS frameworks must not resolve their codecs through shell dylib overrides. */
+function removeDarwinDynamicLinkerOverrides(env: NodeJS.ProcessEnv, platform: string): string[] {
+  if (platform !== "darwin") return [];
+  const removed = Object.keys(env).filter((key) => key.startsWith("DYLD_"));
+  for (const key of removed) delete env[key];
+  return removed;
+}
+
 /**
  * On macOS/Linux, Electron inherits a minimal environment when launched from
  * Finder/Dock. Spawn the user's login shell and capture its full environment
  * via Node's JSON.stringify(process.env), so the daemon and all child processes
- * see the same tools and variables as a normal terminal session.
+ * see the same tools and variables as a normal terminal session, excluding
+ * macOS dynamic-linker overrides that can crash native image and emoji rendering.
  *
  * Approach borrowed from VS Code (src/vs/platform/shell/node/shellEnv.ts).
  */
@@ -505,15 +514,22 @@ export function inheritLoginShellEnv(input: LoginShellEnvDependencies = {}): voi
     spawnSync: input.spawnSync ?? defaultSpawnSync,
     userInfo: input.userInfo ?? defaultUserInfo,
   };
+  const ignoredEnvironmentVariables = new Set(
+    removeDarwinDynamicLinkerOverrides(deps.env, deps.platform),
+  );
   const beforePath = pathEnv(deps.env);
   const startedAt = deps.now();
   const timeoutMs = timeoutMsFromEnv(deps.env);
 
   try {
     const { env, attemptKind } = resolveShellEnv({ deps, timeoutMs });
+    for (const key of removeDarwinDynamicLinkerOverrides(env, deps.platform)) {
+      ignoredEnvironmentVariables.add(key);
+    }
     Object.assign(deps.env, env);
     deps.logger.info("[login-shell-env] applied", {
       attemptKind,
+      ignoredEnvironmentVariables: [...ignoredEnvironmentVariables].sort(),
       durationMs: deps.now() - startedAt,
       timeoutMs,
       beforePath,
