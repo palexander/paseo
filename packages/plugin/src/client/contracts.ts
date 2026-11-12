@@ -1,4 +1,3 @@
-import type { PluginHostPreflightRegistration as HostPreflightRegistration } from "./host-preflight.js";
 import type { PluginText } from "../text.js";
 import type { ComponentType } from "react";
 import type { PaseoApi } from "@getpaseo/client";
@@ -174,8 +173,7 @@ interface PluginClientContextAliases {
   addSidebarItem(contribution: PluginSidebarContribution<PluginText>): PluginCleanup;
 }
 
-export interface PluginClientContext
-  extends PluginCommandCapabilities, PluginClientContextAliases, HostPreflightRegistration {
+export interface PluginClientContext extends PluginCommandCapabilities, PluginClientContextAliases {
   readonly i18n: import("./translations.js").PluginI18n;
   /** Play a base64-encoded audio file on this client; resolves when playback ends. */
   playAudio(source: { base64: string; mimeType: string }): Promise<void>;

@@ -16,7 +16,7 @@ import { useAgentInputDraft } from "@/composer/draft/input-draft";
 import type { CreateAgentInitialValues } from "@/hooks/use-agent-form-state";
 import { useDraftAgentCreateFlow, type DraftCreateAttempt } from "@/composer/draft/create-flow";
 import { resolveTurnPresentation, TURN_LIVENESS_IDLE } from "@/timeline/turn-liveness";
-import { getHostRuntimeStore, useHostRuntimeClient } from "@/runtime/host-runtime";
+import { useHostRuntimeClient, useHostRuntimeIsConnected } from "@/runtime/host-runtime";
 import { buildWorkspaceDraftAgentConfig } from "@/screens/workspace/workspace-draft-agent-config";
 import { buildDraftStoreKey } from "@/stores/draft-keys";
 import { useCreateFlowStore } from "@/stores/create-flow-store";
@@ -305,6 +305,7 @@ export function WorkspaceDraftAgentTab({
 }: WorkspaceDraftAgentTabProps) {
   const { t } = useTranslation();
   const client = useHostRuntimeClient(serverId);
+  const isConnected = useHostRuntimeIsConnected(serverId);
   const workspaceFields = useWorkspaceFields(serverId, workspaceId, (w) => ({
     workspaceDirectory: w.workspaceDirectory,
     id: w.id,
@@ -420,44 +421,6 @@ export function WorkspaceDraftAgentTab({
     [isCompactFormFactor, openInSidePane, serverId, workspaceId],
   );
 
-  const submissionState = useRef({ composerState, client });
-  submissionState.current = { composerState, client };
-  const submissionReadinessListeners = useRef(new Set<() => void>());
-  useEffect(() => {
-    for (const listener of submissionReadinessListeners.current) listener();
-  });
-  const prepareDraftSubmission = useCallback(
-    () =>
-      new Promise<void>((resolve, reject) => {
-        const cleanup = () => {
-          clearTimeout(timer);
-          submissionReadinessListeners.current.delete(check);
-        };
-        const check = () => {
-          const current = submissionState.current.composerState;
-          if (
-            getHostRuntimeStore().getSnapshot(serverId)?.connectionStatus === "online" &&
-            !current.isModelLoading &&
-            current.providerDefinitions.length > 0
-          ) {
-            cleanup();
-            resolve();
-          }
-        };
-        const timer = setTimeout(() => {
-          cleanup();
-          reject(
-            new Error(
-              "Provider settings did not load after connecting. Your message is preserved; try sending again.",
-            ),
-          );
-        }, 30_000);
-        submissionReadinessListeners.current.add(check);
-        check();
-      }),
-    [serverId],
-  );
-
   const {
     formErrorMessage,
     isSubmitting,
@@ -479,10 +442,10 @@ export function WorkspaceDraftAgentTab({
       return validateDraftSubmission({
         text,
         allowsEmptyAutoSubmit: allowsEmptyDraftText,
-        composerState: submissionState.current.composerState,
+        composerState,
         autoSubmitConfig,
         workspaceDirectory: draftWorkingDirectory,
-        isConnected: getHostRuntimeStore().getSnapshot(serverId)?.connectionStatus === "online",
+        isConnected,
       });
     },
     onBeforeSubmit: async () => {
@@ -514,11 +477,11 @@ export function WorkspaceDraftAgentTab({
         images,
         attachments,
         cwd,
-        client: getHostRuntimeStore().getClient(serverId),
+        client,
         workspaceDirectory: draftWorkingDirectory,
         workspaceId: workspaceFields?.id ?? null,
         autoSubmitConfig,
-        composerState: submissionState.current.composerState,
+        composerState,
         hostDisconnectedMessage: t("workspace.terminal.hostDisconnected"),
         selectModelMessage: t("workspaceSetup.errors.selectModel"),
       });
@@ -684,7 +647,6 @@ export function WorkspaceDraftAgentTab({
             workspaceId={workspaceId}
             isPaneFocused={isPaneFocused}
             onSubmitMessage={handleCreateFromInput}
-            onPrepareSubmit={prepareDraftSubmission}
             isSubmitLoading={isSubmitting}
             blurOnSubmit={true}
             textSource={draftInput.textSource}

@@ -47,7 +47,7 @@ import {
 } from "../popover";
 import { SurfaceErrorBoundary } from "../surface-error-boundary";
 import { toPluginTheme } from "../theme";
-import { buttonMatches, type RegisteredPluginButton } from "./model";
+import { buttonMatches, resolveButtonWorkspace, type RegisteredPluginButton } from "./model";
 import { pluginButtonStore } from "./store";
 import { resolvePluginPlatform } from "../platform";
 
@@ -395,12 +395,12 @@ function createButtonView({
     environment: {
       installation: entry.installation,
       toast,
-      state: createPluginClientStateSource(entry.installation.serverId),
+      state: createPluginClientStateSource(entry.serverId),
     },
     props: {
       ...entry.context,
       theme,
-      host: { id: entry.installation.serverId, label: hostLabel },
+      host: { id: entry.serverId, label: hostLabel },
       layout: { compact, platform: resolvePluginPlatform() },
     },
   };
@@ -452,7 +452,7 @@ function useMenuButtonView(entry: RegisteredPluginButton, theme: PluginTheme): B
   const toast = useToast();
   const compact = useIsCompactFormFactor();
   const hosts = useHosts();
-  const serverId = entry.installation.serverId;
+  const serverId = entry.serverId;
   const hostLabel = hosts.find((host) => host.serverId === serverId)?.label ?? serverId;
   return useMemo(
     () => createButtonView({ entry, client, toast, compact, hostLabel, theme }),
@@ -556,7 +556,9 @@ function useButtons(serverId: string, workspaceId: string, agentId: string | nul
     pluginButtonStore.getSnapshot,
   );
   return useMemo(
-    () => entries.filter((entry) => buttonMatches(entry, serverId, workspaceId, agentId)),
+    () => entries
+      .filter((entry) => buttonMatches(entry, serverId, workspaceId, agentId))
+      .map((entry) => resolveButtonWorkspace(entry, workspaceId)),
     [entries, serverId, workspaceId, agentId],
   );
 }

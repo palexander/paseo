@@ -61,7 +61,6 @@ function registry(
         playAudio: async () => {},
         openPanel: () => {},
         addComposerPill: () => ({ update() {}, remove() {} }),
-        addHostPreflight: () => () => {},
         addHeaderButton: () => ({ update() {}, remove() {} }),
       };
     },

@@ -152,7 +152,6 @@ function harness() {
         async playAudio() {},
         openPanel() {},
         addComposerPill: () => ({ update() {}, remove() {} }),
-        addHostPreflight: () => () => {},
         addHeaderButton: () => ({ update() {}, remove() {} }),
       };
     },

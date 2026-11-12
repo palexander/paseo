@@ -4,7 +4,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { describe, expect, it } from "vitest";
 import type { PluginButton } from "@getpaseo/plugin/client";
 import type { InstalledPlugin } from "../types";
-import { PluginButtonStore, buttonMatches } from "./model";
+import { PluginButtonStore, buttonMatches, resolveButtonWorkspace } from "./model";
 
 function installation(): InstalledPlugin {
   return {
@@ -47,6 +47,60 @@ function button(onPress = () => {}): PluginButton {
 }
 
 describe("plugin buttons", () => {
+  it("lets a controller contribute to another host without borrowing the target's runtime", async () => {
+    const buttons = store();
+    const plugin = installation();
+    let calls = 0;
+    buttons.addHeaderButton(plugin, {
+      id: "start",
+      serverId: "host-b",
+      button: button(() => {
+        calls++;
+      }),
+    });
+    const entry = buttons.getSnapshot()[0];
+    expect(buttonMatches(entry, "host-b", "workspace-1", null)).toBe(true);
+    expect(buttonMatches(entry, "host-b", "workspace-2", null)).toBe(true);
+    expect(buttonMatches(entry, "host-a", "workspace-1", null)).toBe(false);
+    expect(buttonMatches(entry, "host-b", "workspace-1", "agent")).toBe(false);
+    expect(entry.installation).toBe(plugin);
+    expect(
+      resolveButtonWorkspace(entry, "workspace-1").context.workspaceId
+    ).toBe("workspace-1");
+    expect(
+      resolveButtonWorkspace(entry, "workspace-2").context.workspaceId
+    ).toBe("workspace-2");
+    expect(entry.context.workspaceId).toBe("");
+    await buttons.run(entry.key);
+    expect(calls).toBe(1);
+    buttons.addHeaderButton(plugin, {
+      id: "start",
+      serverId: "host-c",
+      button: button(),
+    });
+    expect(() =>
+      buttons.addHeaderButton(plugin, {
+        id: "start",
+        serverId: "host-b",
+        button: button(),
+      })
+    ).toThrow("Duplicate plugin button");
+    expect(() =>
+      buttons.addHeaderButton(plugin, {
+        id: "blank",
+        serverId: " ",
+        button: button(),
+      })
+    ).toThrow("Plugin button needs a host");
+    expect(() =>
+      buttons.addHeaderButton(plugin, {
+        id: "blank",
+        workspaceId: " ",
+        button: button(),
+      })
+    ).toThrow("Plugin button needs a workspace");
+  });
+
   it("updates visibility in place, closes hidden content, and scopes each placement", () => {
     const buttons = store();
     const plugin = installation();

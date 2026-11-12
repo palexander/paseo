@@ -1,9 +1,4 @@
 export const en = {
-  hostPreflight: {
-    cancel: "Cancel startup wait",
-    cancelHint: "Cancelling does not stop a machine that is already starting.",
-    retryHint: "Your message is preserved. Send it again to retry.",
-  },
   paneFind: {
     connectionFailure: "Could not search this chat. Check the host connection and retry.",
     historyChangedFailure: "The chat changed while searching. Search again.",

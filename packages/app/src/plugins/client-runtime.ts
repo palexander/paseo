@@ -1,4 +1,3 @@
-import { conversationHostPreflight } from "@/runtime/conversation-host";
 import { createPlayAudio, type AudioEngine } from "@/audio";
 import { getHostRuntimeStore } from "@/runtime/host-runtime";
 import { createPluginHosts } from "./hosts";
@@ -28,16 +27,6 @@ export function createPluginClientRuntime(
     i18n: installation.i18n,
     playAudio: createPlayAudio(audio, installation.lifetime.signal),
     hosts: createPluginHosts(getHostRuntimeStore(), installation.lifetime.signal),
-    addHostPreflight(contribution) {
-      return conversationHostPreflight.register(
-        {
-          serverId: installation.serverId,
-          pluginId: installation.id,
-          signal: installation.lifetime.signal,
-        },
-        contribution,
-      );
-    },
     addComposerPill(contribution) {
       return pluginButtonStore.addComposerPill(installation, contribution);
     },

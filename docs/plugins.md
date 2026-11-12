@@ -438,15 +438,6 @@ The [public reference](../public-docs/plugins/reference.md#icons) owns the autho
 - The plugin compiler loads `.svg` imports as text, so `import icon from "./client/icon.svg"` is the
   markup string.
 
-## Client host preparation
-
-`client.addHostPreflight` lets a reachable controller prepare an offline target
-before explicit conversation creation or message submission. Its app-owned
-lifetime, deadline and per-host request joining live in
-`packages/app/src/runtime/host-preflight.ts`; UI and SDK adapters borrow that
-owner. No daemon hook can wake a stopped target. See the
-[public contract](../public-docs/plugins/reference.md#prepare-a-conversation-host).
-
 ## Lifecycle hooks
 
 Server entries register async handlers with `server.addHook(name, handler)`, returning a cleanup

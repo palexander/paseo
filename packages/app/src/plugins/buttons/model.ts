@@ -22,6 +22,8 @@ export interface RegisteredPluginButton {
   id: string;
   installation: InstalledPlugin;
   placement: ButtonPlacement;
+  serverId: string;
+  allWorkspaces: boolean;
   context: PluginButtonContext;
   button: ResolvedPluginButton;
   pending: boolean;
@@ -61,7 +63,7 @@ export class PluginButtonStore {
   ): PluginButtonRegistration<PluginText> {
     return this.add(installation, input, "header", {
       context: "workspace",
-      workspaceId: input.workspaceId.trim(),
+      workspaceId: input.workspaceId?.trim() ?? "",
     });
   }
 
@@ -84,11 +86,15 @@ export class PluginButtonStore {
     context: PluginButtonContext,
   ): PluginButtonRegistration<PluginText> {
     const id = requireButtonId(input.id);
-    if (!context.workspaceId.trim()) throw new Error("Plugin button needs a workspace");
+    const serverId = input.serverId?.trim() ?? installation.serverId;
+    if (!serverId) throw new Error("Plugin button needs a host");
+    const allWorkspaces = placement === "header" && input.workspaceId === undefined;
+    if (!allWorkspaces && !context.workspaceId.trim()) throw new Error("Plugin button needs a workspace");
     const duplicate = this.entries.some(
       (entry) =>
         entry.installation === installation &&
         entry.placement === placement &&
+        entry.serverId === serverId &&
         entry.id === id &&
         entry.context.workspaceId === context.workspaceId &&
         (entry.context.context === "workspace" ||
@@ -105,6 +111,8 @@ export class PluginButtonStore {
         id,
         installation,
         placement,
+        serverId,
+        allWorkspaces,
         context,
         button: initialButton,
         pending: false,
@@ -175,8 +183,8 @@ export function buttonMatches(
   agentId: string | null,
 ): boolean {
   if (
-    entry.installation.serverId !== serverId ||
-    entry.context.workspaceId !== workspaceId ||
+    entry.serverId !== serverId ||
+    (!entry.allWorkspaces && entry.context.workspaceId !== workspaceId) ||
     !entry.button.visible
   )
     return false;
@@ -186,4 +194,14 @@ export function buttonMatches(
     entry.context.context === "agent" &&
     entry.context.agentId === agentId
   );
+}
+
+/** Bind a host-wide registration to a rendered workspace without mutating the shared descriptor. */
+export function resolveButtonWorkspace(
+  entry: RegisteredPluginButton,
+  workspaceId: string
+): RegisteredPluginButton {
+  return entry.allWorkspaces
+    ? { ...entry, context: { context: "workspace", workspaceId } }
+    : entry;
 }

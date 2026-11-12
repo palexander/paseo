@@ -46,11 +46,15 @@ export interface PluginButtonRegistration<Text extends PluginText = string> {
 }
 export interface PluginHeaderButtonContribution<Text extends PluginText = string> {
   id: string;
-  workspaceId: string;
+  /** Target an app-known host. Defaults to the plugin's own host. */
+  serverId?: string;
+  /** Omit to contribute to every workspace on the target host. */
+  workspaceId?: string;
   button: PluginButton<Text>;
 }
 export interface PluginComposerPillContribution<
   Text extends PluginText = string,
-> extends PluginHeaderButtonContribution<Text> {
+> extends Omit<PluginHeaderButtonContribution<Text>, "serverId" | "workspaceId"> {
+  workspaceId: string;
   agentId: string;
 }

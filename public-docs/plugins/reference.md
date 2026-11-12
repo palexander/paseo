@@ -1863,6 +1863,23 @@ It switches one header button between modes; additional actions use a named Tool
 `client.addHeaderButton({ id, workspaceId, button })` adds a button before the built-in actions on
 the workspace header's right side. It returns a registration with `update(patch)` and `remove()`.
 
+Pass `serverId` to target another app-known host, and omit `workspaceId` to show the button in
+every workspace on that host. For example, a plugin on a reachable controller can supply manual
+machine controls while the target is offline:
+
+```tsx
+client.addHeaderButton({
+  id: "machine",
+  serverId: remoteServerId,
+  button: { title: "Machine", icon: "Server", behavior: { kind: "popover", Content: MachineControls } },
+});
+```
+
+The icon and content receive the target `host` and current `workspaceId`; `useWorkspace` reads
+that host's cached workspace state. Plugin RPCs and `usePaseo()` still belong to the contributing
+installation. The target does not need to be connected, but the contributing installation must
+remain loaded. This registration does not start a host or change reconnect or message behavior.
+
 ```tsx
 const review = client.addHeaderButton({
   id: "review",
@@ -2175,56 +2192,6 @@ You can also release individual subscriptions through the normal SDK API.
 Plugins are trusted app code; cross-host access is intentional. Summaries contain no connection
 URLs or credentials, and borrowed APIs provide no connection lifecycle controls. See the
 [host agents example](https://github.com/getpaseo/paseo/tree/main/plugin-examples/hosts).
-
-## Prepare a conversation host
-
-This source build adds `client.addHostPreflight(contribution)` for plugins on a
-reachable controller that can prepare another host. Released clients without
-this method need an app update. The hook runs in the app before the target
-host's agent RPC, so the target daemon can be stopped.
-
-```ts
-client.addHostPreflight({
-  id: "cloud-host",
-  matches: ({ serverId, signal }) => isManagedHost({ serverId, signal }),
-  async prepare({ serverId, signal, reportProgress }) {
-    reportProgress("Starting cloud machine...");
-    await startOrReconnect({ serverId, signal, onProgress: reportProgress });
-  },
-});
-```
-
-`isManagedHost` and `startOrReconnect` are plugin-owned operations. Invoke the
-installation's controller RPCs for them; keep infrastructure credentials and
-machine ownership checks on that controller. The target's offline SDK connection
-cannot start its own machine. Return `false` for hosts your plugin does not own.
-
-| Field                                    | Meaning                                                                    |
-| ---------------------------------------- | -------------------------------------------------------------------------- |
-| `id`                                     | Unique within this plugin installation; registration returns a remover     |
-| `matches(request)`                       | Async ownership check; only reachable controller installations participate |
-| `prepare(request)`                       | Async machine preparation; resolve when the host can accept a connection   |
-| `request.serverId`                       | Target host identity                                                       |
-| `request.workspaceId`, `request.agentId` | Conversation context, when available                                       |
-| `request.reason`                         | `agent.create` or `agent.send`                                             |
-| `request.signal`                         | Abort signal for cancellation, timeout or plugin teardown                  |
-| `request.reportProgress(message)`        | Update the app's inline startup status during preparation                  |
-
-The app invokes preflight for an explicit new conversation action or message
-submission. Opening a cached workspace, restoring tabs, background connection
-retries and host status changes do not invoke it. Online targets bypass hooks.
-Multiple matching controllers fail rather than selecting one implicitly.
-
-Concurrent actions for one host share preparation. After the plugin resolves,
-Paseo requests reconnection and waits for the named host to authenticate before
-continuing the original action. Preparation plus connection has a five-minute
-deadline. Failure preserves the submitted message and attachments for retry.
-
-The composer shows progress and a cancel action, including on compact layouts.
-Cancellation ends the app's wait; it does not undo a machine start already
-accepted by a controller. Removing a registration or unloading its installation
-aborts active preparation. The plugin must release its own resources when its
-signal aborts.
 
 ## Add plugin-specific backend behavior
 

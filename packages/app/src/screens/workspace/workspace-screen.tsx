@@ -1,4 +1,3 @@
-import { prepareConversationHost } from "@/runtime/conversation-host";
 import { planTimelineTailFetch } from "@/timeline/timeline-sync-plan";
 import { useHostFeature } from "@/runtime/host-features";
 import {
@@ -1779,22 +1778,11 @@ function WorkspaceScreenContent({
     : t("workspace.tabs.explorerSidebar.open");
 
   const activeTabKey = useMemo(() => activeTabId ?? "", [activeTabId]);
-  const prepareNewConversationHost = useCallback(() => {
-    if (normalizedServerId && normalizedWorkspaceId) {
-      void prepareConversationHost({
-        serverId: normalizedServerId,
-        workspaceId: normalizedWorkspaceId,
-        reason: "agent.create",
-      }).catch(() => {});
-    }
-  }, [normalizedServerId, normalizedWorkspaceId]);
-
   const handleCreateDraftTab = useCallback(
     (input?: { paneId?: string }) => {
       openWorkspaceDraftTab({ paneId: input?.paneId });
-      prepareNewConversationHost();
     },
-    [openWorkspaceDraftTab, prepareNewConversationHost],
+    [openWorkspaceDraftTab],
   );
 
   const handleCreateTerminal = useStableEvent((input?: { paneId?: string }) => {
@@ -1856,7 +1844,6 @@ function WorkspaceScreenContent({
           kind: "draft",
           draftId: generateDraftId(),
         });
-        prepareNewConversationHost();
         return;
       }
       if (selection.kind === "terminal") {
@@ -1869,13 +1856,7 @@ function WorkspaceScreenContent({
       const { browserId } = createWorkspaceBrowser();
       openTarget({ kind: "browser", browserId });
     },
-    [
-      createTerminal,
-      createWorkspaceTab,
-      persistenceKey,
-      replaceWorkspaceTabTarget,
-      prepareNewConversationHost,
-    ],
+    [createTerminal, createWorkspaceTab, persistenceKey, replaceWorkspaceTabTarget],
   );
 
   const handleOpenUrlInBrowserTab = useCallback(
